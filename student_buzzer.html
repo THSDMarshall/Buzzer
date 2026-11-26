@@ -1,0 +1,1455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Classroom Buzzer — Student Buzzer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    /* =======================================================================
+       Design Tokens & High-Contrast Student Buzzer Theme
+       ======================================================================= */
+    :root {
+      --bg-page: #0b1120;
+      --bg-surface: #111827;
+      --bg-surface-elevated: #1e293b;
+      --bg-surface-soft: #172033;
+      --text-primary: #f8fafc;
+      --text-secondary: #cbd5e1;
+      --text-muted: #94a3b8;
+      --border-subtle: rgba(148, 163, 184, 0.18);
+      --border-strong: rgba(148, 163, 184, 0.34);
+
+      --accent-primary: #38bdf8;
+      --accent-primary-hover: #0ea5e9;
+      --accent-indigo: #818cf8;
+
+      --buzzer-open: #ef4444;
+      --buzzer-open-hover: #dc2626;
+      --buzzer-open-shadow: 0 18px 40px rgba(239, 68, 68, 0.38), 0 0 0 8px rgba(239, 68, 68, 0.14);
+
+      --success: #22c55e;
+      --success-bg: rgba(34, 197, 94, 0.14);
+      --success-border: rgba(34, 197, 94, 0.45);
+
+      --warning: #f59e0b;
+      --warning-bg: rgba(245, 158, 11, 0.14);
+      --warning-border: rgba(245, 158, 11, 0.45);
+
+      --danger: #ef4444;
+      --danger-bg: rgba(239, 68, 68, 0.15);
+      --danger-border: rgba(239, 68, 68, 0.48);
+
+      --radius-sm: 10px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --radius-xl: 26px;
+      --shadow-card: 0 14px 34px rgba(0, 0, 0, 0.36);
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      min-height: 100%;
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg-page);
+      color: var(--text-primary);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button, input {
+      font-family: inherit;
+    }
+
+    button {
+      cursor: pointer;
+      border: none;
+      transition: transform 0.1s ease, background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+      touch-action: manipulation;
+    }
+
+    button:active:not(:disabled) {
+      transform: scale(0.97);
+    }
+
+    button:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    /* =======================================================================
+       Top Header Bar
+       ======================================================================= */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      background: rgba(11, 17, 32, 0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .topbar-inner {
+      max-width: 920px;
+      margin: 0 auto;
+      padding: 14px 20px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-badge {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #ef4444, #f97316);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 1.15rem;
+      color: #ffffff;
+      box-shadow: 0 8px 20px rgba(239, 68, 68, 0.35);
+    }
+
+    .brand-title {
+      font-size: 1.1rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-subtitle {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .topbar-controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 13px;
+      border-radius: 999px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+    }
+
+    .status-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--accent-primary);
+    }
+
+    .status-pill.is-firebase .status-dot {
+      background: var(--success);
+      box-shadow: 0 0 10px rgba(34, 197, 94, 0.7);
+    }
+
+    .status-pill.is-error .status-dot {
+      background: var(--danger);
+    }
+
+    /* =======================================================================
+       Buttons & Form Inputs
+       ======================================================================= */
+    .btn-ghost {
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-primary);
+      font-size: 0.88rem;
+      font-weight: 700;
+    }
+
+    .btn-ghost:hover:not(:disabled) {
+      background: #273549;
+      border-color: var(--border-strong);
+    }
+
+    .btn-primary {
+      width: 100%;
+      padding: 15px 20px;
+      border-radius: var(--radius-md);
+      background: var(--accent-primary);
+      color: #061322;
+      font-size: 1.02rem;
+      font-weight: 800;
+      box-shadow: 0 10px 24px rgba(56, 189, 248, 0.25);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: var(--accent-primary-hover);
+      color: #ffffff;
+    }
+
+    .btn-google {
+      width: 100%;
+      padding: 12px 16px;
+      border-radius: var(--radius-md);
+      background: #ffffff;
+      color: #0f172a;
+      font-size: 0.94rem;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.22);
+    }
+
+    .btn-google:hover:not(:disabled) {
+      background: #f1f5f9;
+    }
+
+    .field-group {
+      margin-bottom: 16px;
+    }
+
+    .field-label {
+      display: block;
+      font-size: 0.86rem;
+      font-weight: 700;
+      color: var(--text-secondary);
+      margin-bottom: 7px;
+    }
+
+    .text-input, .code-input {
+      width: 100%;
+      padding: 14px 16px;
+      border-radius: var(--radius-md);
+      background: var(--bg-page);
+      border: 1.5px solid var(--border-strong);
+      color: var(--text-primary);
+      font-size: 1rem;
+      font-weight: 600;
+      outline: none;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .text-input:focus, .code-input:focus {
+      border-color: var(--accent-primary);
+      box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
+    }
+
+    .code-input {
+      font-size: 1.65rem;
+      font-weight: 900;
+      letter-spacing: 0.22em;
+      text-align: center;
+    }
+
+    /* =======================================================================
+       Main Container & Cards
+       ======================================================================= */
+    .main-container {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 26px 20px 52px;
+    }
+
+    .card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-xl);
+      padding: 26px;
+      box-shadow: var(--shadow-card);
+    }
+
+    .join-header {
+      margin-bottom: 20px;
+    }
+
+    .join-header h1 {
+      margin: 0 0 6px;
+      font-size: 1.65rem;
+      font-weight: 900;
+      letter-spacing: -0.02em;
+    }
+
+    .join-header p {
+      margin: 0;
+      font-size: 0.95rem;
+      color: var(--text-secondary);
+    }
+
+    .divider-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 14px 0;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .divider-row::before, .divider-row::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: var(--border-subtle);
+    }
+
+    .google-user-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px 14px;
+      border-radius: var(--radius-md);
+      background: var(--bg-surface-soft);
+      border: 1px solid var(--border-subtle);
+      margin-top: 10px;
+      font-size: 0.88rem;
+      color: var(--text-secondary);
+    }
+
+    .error-banner {
+      margin-bottom: 16px;
+      padding: 13px 16px;
+      border-radius: var(--radius-md);
+      background: var(--danger-bg);
+      border: 1.5px solid var(--danger-border);
+      color: #fecaca;
+      font-size: 0.92rem;
+      font-weight: 700;
+    }
+
+    /* =======================================================================
+       Active Buzzer Stage
+       ======================================================================= */
+    .room-banner {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding-bottom: 18px;
+      border-bottom: 1px solid var(--border-subtle);
+      margin-bottom: 22px;
+    }
+
+    .student-identity {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+
+    .student-identity strong {
+      color: var(--text-primary);
+      font-size: 1.05rem;
+      font-weight: 800;
+    }
+
+    .room-code-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 14px;
+      border-radius: 999px;
+      background: var(--bg-surface-elevated);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      font-size: 0.88rem;
+      font-weight: 800;
+      color: var(--accent-primary);
+    }
+
+    .buzzer-status-box {
+      padding: 16px 20px;
+      border-radius: var(--radius-lg);
+      background: var(--bg-surface-soft);
+      border: 1.5px solid var(--border-subtle);
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    .buzzer-status-box.is-ready {
+      background: rgba(239, 68, 68, 0.1);
+      border-color: rgba(239, 68, 68, 0.4);
+    }
+
+    .buzzer-status-box.is-winner {
+      background: var(--success-bg);
+      border-color: var(--success-border);
+    }
+
+    .buzzer-status-box.is-frozen {
+      background: var(--warning-bg);
+      border-color: var(--warning-border);
+    }
+
+    .buzzer-status-title {
+      font-size: 1.25rem;
+      font-weight: 900;
+      letter-spacing: -0.015em;
+      margin: 0 0 4px;
+    }
+
+    .buzzer-status-desc {
+      margin: 0;
+      font-size: 0.92rem;
+      color: var(--text-secondary);
+      font-weight: 600;
+    }
+
+    /* Big Central Buzzer Button */
+    .buzzer-stage {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 18px 10px 24px;
+    }
+
+    .buzzer-btn {
+      width: min(290px, 74vw);
+      height: min(290px, 74vw);
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%, #f87171, var(--buzzer-open) 62%, #b91c1c 100%);
+      color: #ffffff;
+      font-size: clamp(1.85rem, 6vw, 2.5rem);
+      font-weight: 900;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      border: 6px solid rgba(255, 255, 255, 0.22);
+      box-shadow: var(--buzzer-open-shadow);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      user-select: none;
+    }
+
+    .buzzer-btn:hover:not(:disabled) {
+      background: radial-gradient(circle at 35% 30%, #fca5a5, var(--buzzer-open-hover) 62%, #991b1b 100%);
+      transform: scale(1.02);
+    }
+
+    .buzzer-btn:active:not(:disabled) {
+      transform: scale(0.95);
+    }
+
+    .buzzer-btn.is-won {
+      background: radial-gradient(circle at 35% 30%, #4ade80, #16a34a 65%, #15803d 100%);
+      border-color: rgba(255, 255, 255, 0.35);
+      box-shadow: 0 18px 38px rgba(34, 197, 94, 0.36), 0 0 0 8px rgba(34, 197, 94, 0.16);
+      color: #052e16;
+    }
+
+    .buzzer-btn.is-locked {
+      background: linear-gradient(145deg, #334155, #1e293b);
+      border-color: rgba(148, 163, 184, 0.28);
+      box-shadow: inset 0 4px 14px rgba(0, 0, 0, 0.45);
+      color: #94a3b8;
+    }
+
+    .buzzer-sublabel {
+      font-size: 0.82rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      opacity: 0.92;
+    }
+
+    .buzzer-footer-row {
+      margin-top: 18px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border-subtle);
+      font-size: 0.86rem;
+      color: var(--text-muted);
+    }
+
+    .buzzer-footer-row kbd {
+      padding: 2px 7px;
+      border-radius: 6px;
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-strong);
+      color: var(--text-primary);
+      font-family: inherit;
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+
+    /* =======================================================================
+       Room Closed Overlay / Banner Card
+       ======================================================================= */
+    .closed-notice {
+      margin-bottom: 20px;
+      padding: 20px;
+      border-radius: var(--radius-lg);
+      background: var(--danger-bg);
+      border: 2px solid var(--danger-border);
+      text-align: center;
+    }
+
+    .closed-notice h2 {
+      margin: 0 0 6px;
+      font-size: 1.35rem;
+      font-weight: 900;
+      color: #fecaca;
+    }
+
+    .closed-notice p {
+      margin: 0 0 14px;
+      font-size: 0.94rem;
+      color: #fee2e2;
+    }
+
+    .btn-rejoin {
+      padding: 11px 20px;
+      border-radius: var(--radius-md);
+      background: #ffffff;
+      color: #450a0a;
+      font-size: 0.92rem;
+      font-weight: 800;
+    }
+
+    .btn-rejoin:hover {
+      background: #fee2e2;
+    }
+
+    /* =======================================================================
+       Toast
+       ======================================================================= */
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 60;
+      max-width: 390px;
+      padding: 12px 16px;
+      border-radius: var(--radius-md);
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-strong);
+      color: var(--text-primary);
+      font-size: 0.9rem;
+      font-weight: 700;
+      box-shadow: 0 14px 32px rgba(0, 0, 0, 0.45);
+    }
+
+    .toast.is-success {
+      border-color: var(--success-border);
+      background: #0f291c;
+      color: #bbf7d0;
+    }
+
+    .toast.is-error {
+      border-color: var(--danger-border);
+      background: #2c1215;
+      color: #fecaca;
+    }
+  </style>
+</head>
+<body>
+  <!-- Top Bar (Student-Only Controls) -->
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand-group">
+        <div class="brand-badge" aria-hidden="true">B</div>
+        <div>
+          <div class="brand-title">Classroom Buzzer</div>
+          <div class="brand-subtitle">Student Buzzer · Join with 3-Digit Code</div>
+        </div>
+      </div>
+
+      <div class="topbar-controls">
+        <span id="connection-badge" class="status-pill" title="Live sync connection">
+          <span class="status-dot"></span>
+          <span id="connection-label">Connecting...</span>
+        </span>
+        <button id="sound-toggle-btn" type="button" class="btn-ghost" aria-pressed="true">
+          Sound: ON
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-container">
+    <!-- =====================================================================
+         JOIN ROOM CARD
+         ===================================================================== -->
+    <section id="join-panel" class="card" aria-label="Join Buzzer Room">
+      <div class="join-header">
+        <h1>Join a Buzzer Room</h1>
+        <p>Enter your name and your teacher's 3-digit room code to get ready.</p>
+      </div>
+
+      <div id="room-closed-banner" class="closed-notice hidden" role="alert">
+        <h2>Room Closed by Host</h2>
+        <p id="room-closed-detail">
+          Your teacher closed the room and removed connected students. Enter a new 3-digit code below to rejoin.
+        </p>
+        <button id="dismiss-closed-btn" type="button" class="btn-rejoin">
+          Enter New Code
+        </button>
+      </div>
+
+      <div id="join-error-banner" class="error-banner hidden" role="alert"></div>
+
+      <form id="join-form" novalidate>
+        <div class="field-group">
+          <label for="student-name-input" class="field-label">Your Name</label>
+          <input
+            id="student-name-input"
+            type="text"
+            class="text-input"
+            placeholder="e.g., Alex Morgan"
+            maxlength="40"
+            autocomplete="name"
+            required
+          />
+        </div>
+
+        <div>
+          <button id="google-signin-btn" type="button" class="btn-google">
+            <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+              <path fill="#4285F4" d="M23.49 12.27c0-.79-.07-1.54-.19-2.27H12v4.51h6.47c-.29 1.5-1.14 2.77-2.4 3.62v3.01h3.88c2.27-2.09 3.54-5.17 3.54-8.87z"/>
+              <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.01c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.11-6.72-4.96H1.26v3.1C3.23 21.3 7.31 24 12 24z"/>
+              <path fill="#FBBC05" d="M5.28 14.28c-.24-.72-.38-1.49-.38-2.28s.14-1.56.38-2.28V6.62H1.26C.46 8.21 0 10.05 0 12s.46 3.79 1.26 5.38l4.02-3.1z"/>
+              <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.23 2.7 1.26 6.62l4.02 3.1c.95-2.85 3.6-4.97 6.72-4.97z"/>
+            </svg>
+            <span>Continue with Google (Optional)</span>
+          </button>
+
+          <div id="google-account-bar" class="google-user-row hidden">
+            <span>Signed in as <strong id="google-account-name"></strong></span>
+            <button id="google-signout-btn" type="button" class="btn-ghost">Sign out</button>
+          </div>
+        </div>
+
+        <div class="divider-row">Room Code</div>
+
+        <div class="field-group">
+          <label for="room-code-input" class="field-label">3-Digit Room Code (100–999)</label>
+          <input
+            id="room-code-input"
+            type="text"
+            inputmode="numeric"
+            pattern="[0-9]{3}"
+            maxlength="3"
+            class="code-input"
+            placeholder="000"
+            required
+          />
+        </div>
+
+        <button id="join-room-btn" type="submit" class="btn-primary">
+          Join Buzzer Room
+        </button>
+      </form>
+    </section>
+
+    <!-- =====================================================================
+         ACTIVE BUZZER VIEW
+         ===================================================================== -->
+    <section id="buzzer-panel" class="card hidden" aria-label="Live Student Buzzer">
+      <div id="live-room-closed-banner" class="closed-notice hidden" role="alert">
+        <h2>Room Closed by Host</h2>
+        <p>Your teacher closed the room and removed all connected students.</p>
+        <button id="rejoin-after-close-btn" type="button" class="btn-rejoin">
+          Leave &amp; Enter New Code
+        </button>
+      </div>
+
+      <div class="room-banner">
+        <div class="student-identity">
+          Buzzing as <strong id="active-student-name">Student</strong>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span class="room-code-pill">Room <span id="active-room-code">---</span></span>
+          <button id="leave-room-btn" type="button" class="btn-ghost">Leave Room</button>
+        </div>
+      </div>
+
+      <div id="buzzer-status-box" class="buzzer-status-box is-ready" role="status" aria-live="polite">
+        <h1 id="buzzer-status-title" class="buzzer-status-title">BUZZERS OPEN — GET READY!</h1>
+        <p id="buzzer-status-desc" class="buzzer-status-desc">Tap the buzzer button as soon as you know the answer.</p>
+      </div>
+
+      <div class="buzzer-stage">
+        <button id="buzzer-btn" type="button" class="buzzer-btn" aria-label="Buzz in">
+          <span id="buzzer-main-label">BUZZ</span>
+          <span id="buzzer-sub-label" class="buzzer-sublabel">TAP OR SPACE</span>
+        </button>
+      </div>
+
+      <div class="buzzer-footer-row">
+        <span>Tip: Press <kbd>Space</kbd> to buzz when unlocked.</span>
+        <span id="buzz-reaction-readout"></span>
+      </div>
+    </section>
+  </main>
+
+  <!-- Toast Banner -->
+  <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+
+  <script type="module">
+    import { initializeApp, getApps, deleteApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+    import {
+      getDatabase,
+      ref,
+      get,
+      set,
+      update,
+      remove,
+      onValue,
+      off,
+      runTransaction
+    } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
+    import {
+      getAuth,
+      GoogleAuthProvider,
+      signInWithPopup,
+      signOut,
+      onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+
+    // =======================================================================
+    // Pre-Populated Firebase Configuration (europe-west1)
+    // =======================================================================
+    const FIREBASE_CONFIG = {
+      apiKey: "AIzaSyBkWIylJityNvDyyAVXvMDiASF7B9G8Elk",
+      authDomain: "classroom-buzzer-ths.firebaseapp.com",
+      databaseURL: "https://classroom-buzzer-ths-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "classroom-buzzer-ths",
+      storageBucket: "classroom-buzzer-ths.firebasestorage.app",
+      messagingSenderId: "68102083340",
+      appId: "1:68102083340:web:dfffa4da021d192889ef29",
+      measurementId: "G-0CJFR7LVM7"
+    };
+
+    const STORAGE_KEYS = {
+      studentName: "cb_student_name_v1",
+      studentId: "cb_student_id_v1",
+      lastRoomCode: "cb_student_last_code_v1",
+      soundEnabled: "cb_student_sound_enabled_v1",
+      localRooms: "cb_classroom_buzzer_rooms_v1"
+    };
+
+    const BROADCAST_CHANNEL_NAME = "cb_classroom_buzzer_sync_v1";
+
+    function getOrCreateStudentId() {
+      let id = localStorage.getItem(STORAGE_KEYS.studentId);
+      if (!id) {
+        id = "stu_" + Math.random().toString(36).slice(2, 11);
+        localStorage.setItem(STORAGE_KEYS.studentId, id);
+      }
+      return id;
+    }
+
+    // =======================================================================
+    // Student State
+    // =======================================================================
+    const state = {
+      studentId: getOrCreateStudentId(),
+      studentName: localStorage.getItem(STORAGE_KEYS.studentName) || "",
+      googleUserName: "",
+      roomCode: null,
+      roomData: null,
+      joined: false,
+      roomClosedNotice: false,
+      lastReactionMs: null,
+      soundEnabled: localStorage.getItem(STORAGE_KEYS.soundEnabled) !== "false",
+      firebase: {
+        active: false,
+        app: null,
+        db: null,
+        auth: null,
+        roomRef: null,
+        listener: null
+      },
+      broadcastChannel: null,
+      toastTimer: null,
+      audioCtx: null
+    };
+
+    // =======================================================================
+    // DOM References
+    // =======================================================================
+    const dom = {
+      connectionBadge: document.getElementById("connection-badge"),
+      connectionLabel: document.getElementById("connection-label"),
+      soundToggleBtn: document.getElementById("sound-toggle-btn"),
+      joinPanel: document.getElementById("join-panel"),
+      roomClosedBanner: document.getElementById("room-closed-banner"),
+      roomClosedDetail: document.getElementById("room-closed-detail"),
+      dismissClosedBtn: document.getElementById("dismiss-closed-btn"),
+      joinErrorBanner: document.getElementById("join-error-banner"),
+      joinForm: document.getElementById("join-form"),
+      studentNameInput: document.getElementById("student-name-input"),
+      googleSigninBtn: document.getElementById("google-signin-btn"),
+      googleAccountBar: document.getElementById("google-account-bar"),
+      googleAccountName: document.getElementById("google-account-name"),
+      googleSignoutBtn: document.getElementById("google-signout-btn"),
+      roomCodeInput: document.getElementById("room-code-input"),
+      joinRoomBtn: document.getElementById("join-room-btn"),
+      buzzerPanel: document.getElementById("buzzer-panel"),
+      liveRoomClosedBanner: document.getElementById("live-room-closed-banner"),
+      rejoinAfterCloseBtn: document.getElementById("rejoin-after-close-btn"),
+      activeStudentName: document.getElementById("active-student-name"),
+      activeRoomCode: document.getElementById("active-room-code"),
+      leaveRoomBtn: document.getElementById("leave-room-btn"),
+      buzzerStatusBox: document.getElementById("buzzer-status-box"),
+      buzzerStatusTitle: document.getElementById("buzzer-status-title"),
+      buzzerStatusDesc: document.getElementById("buzzer-status-desc"),
+      buzzerBtn: document.getElementById("buzzer-btn"),
+      buzzerMainLabel: document.getElementById("buzzer-main-label"),
+      buzzerSubLabel: document.getElementById("buzzer-sub-label"),
+      buzzReactionReadout: document.getElementById("buzz-reaction-readout"),
+      toast: document.getElementById("toast")
+    };
+
+    // =======================================================================
+    // Audio & Toast Helpers
+    // =======================================================================
+    function showToast(message, type = "info") {
+      dom.toast.textContent = message;
+      dom.toast.className = "toast";
+      if (type === "success") dom.toast.classList.add("is-success");
+      if (type === "error") dom.toast.classList.add("is-error");
+      dom.toast.classList.remove("hidden");
+
+      clearTimeout(state.toastTimer);
+      state.toastTimer = setTimeout(() => {
+        dom.toast.classList.add("hidden");
+      }, 3200);
+    }
+
+    function playTone(freq = 660, duration = 0.2, type = "sine") {
+      if (!state.soundEnabled) return;
+      try {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextClass) return;
+        if (!state.audioCtx) {
+          state.audioCtx = new AudioContextClass();
+        }
+        if (state.audioCtx.state === "suspended") {
+          state.audioCtx.resume();
+        }
+        const osc = state.audioCtx.createOscillator();
+        const gain = state.audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, state.audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.16, state.audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, state.audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(state.audioCtx.destination);
+        osc.start();
+        osc.stop(state.audioCtx.currentTime + duration);
+      } catch (_err) {
+        // Ignore audio context restrictions
+      }
+    }
+
+    function showJoinError(message) {
+      dom.joinErrorBanner.textContent = message;
+      dom.joinErrorBanner.classList.remove("hidden");
+    }
+
+    function clearJoinError() {
+      dom.joinErrorBanner.textContent = "";
+      dom.joinErrorBanner.classList.add("hidden");
+    }
+
+    // =======================================================================
+    // Local Fallback Sync (BroadcastChannel + localStorage)
+    // =======================================================================
+    function readLocalRooms() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEYS.localRooms);
+        return raw ? JSON.parse(raw) : {};
+      } catch (_e) {
+        return {};
+      }
+    }
+
+    function writeLocalRooms(rooms) {
+      try {
+        localStorage.setItem(STORAGE_KEYS.localRooms, JSON.stringify(rooms));
+      } catch (_e) {
+        // Ignore storage errors
+      }
+    }
+
+    function broadcastLocalRoom(code, roomObj) {
+      try {
+        if (state.broadcastChannel) {
+          state.broadcastChannel.postMessage({ type: "ROOM_UPDATE", code, room: roomObj });
+        }
+      } catch (_e) {
+        // Ignore BroadcastChannel errors
+      }
+    }
+
+    function initBroadcastChannel() {
+      if ("BroadcastChannel" in window) {
+        state.broadcastChannel = new BroadcastChannel(BROADCAST_CHANNEL_NAME);
+        state.broadcastChannel.onmessage = (event) => {
+          if (state.firebase.active) return;
+          const msg = event.data;
+          if (msg && msg.type === "ROOM_UPDATE" && String(msg.code) === String(state.roomCode)) {
+            handleRoomSnapshot(msg.room);
+          }
+        };
+      }
+
+      window.addEventListener("storage", (event) => {
+        if (state.firebase.active) return;
+        if (event.key === STORAGE_KEYS.localRooms && state.roomCode && state.joined) {
+          const rooms = readLocalRooms();
+          handleRoomSnapshot(rooms[state.roomCode] || null);
+        }
+      });
+    }
+
+    // =======================================================================
+    // Firebase Setup & Optional Google Sign-In
+    // =======================================================================
+    function setConnectionStatus(mode, label) {
+      dom.connectionBadge.className = "status-pill";
+      if (mode === "firebase") dom.connectionBadge.classList.add("is-firebase");
+      if (mode === "error") dom.connectionBadge.classList.add("is-error");
+      dom.connectionLabel.textContent = label;
+    }
+
+    async function initFirebase() {
+      if (!FIREBASE_CONFIG || !FIREBASE_CONFIG.apiKey || !FIREBASE_CONFIG.databaseURL) {
+        state.firebase.active = false;
+        setConnectionStatus("local", "Local Browser Sync");
+        return;
+      }
+
+      try {
+        for (const existing of getApps()) {
+          await deleteApp(existing);
+        }
+        const app = initializeApp(FIREBASE_CONFIG, "classroom-buzzer-student");
+        const db = getDatabase(app, FIREBASE_CONFIG.databaseURL);
+        const auth = getAuth(app);
+
+        state.firebase.app = app;
+        state.firebase.db = db;
+        state.firebase.auth = auth;
+        state.firebase.active = true;
+        setConnectionStatus("firebase", "Live Sync Connected");
+
+        onAuthStateChanged(auth, (user) => {
+          if (user && user.displayName) {
+            state.googleUserName = user.displayName;
+            dom.googleAccountName.textContent = user.displayName;
+            dom.googleAccountBar.classList.remove("hidden");
+            if (!dom.studentNameInput.value.trim()) {
+              dom.studentNameInput.value = user.displayName;
+              state.studentName = user.displayName;
+              localStorage.setItem(STORAGE_KEYS.studentName, user.displayName);
+            }
+          } else {
+            state.googleUserName = "";
+            dom.googleAccountBar.classList.add("hidden");
+          }
+        });
+      } catch (err) {
+        console.error("Firebase init error, using local fallback:", err);
+        state.firebase.active = false;
+        setConnectionStatus("error", "Sync Fallback Active");
+      }
+    }
+
+    async function handleGoogleSignIn() {
+      if (!state.firebase.active || !state.firebase.auth) {
+        showToast("Google Sign-In requires Firebase Auth to be enabled.", "error");
+        return;
+      }
+      try {
+        const provider = new GoogleAuthProvider();
+        const result = await signInWithPopup(state.firebase.auth, provider);
+        const displayName = result?.user?.displayName || "";
+        if (displayName) {
+          dom.studentNameInput.value = displayName;
+          state.studentName = displayName;
+          localStorage.setItem(STORAGE_KEYS.studentName, displayName);
+          showToast(`Signed in as ${displayName}`, "success");
+        }
+      } catch (err) {
+        console.error("Google sign-in error:", err);
+        showToast("Google sign-in was cancelled or blocked. You can type your name instead.", "error");
+      }
+    }
+
+    async function handleGoogleSignOut() {
+      if (!state.firebase.active || !state.firebase.auth) return;
+      try {
+        await signOut(state.firebase.auth);
+        showToast("Signed out of Google account", "info");
+      } catch (_err) {
+        // Ignore sign out errors
+      }
+    }
+
+    // =======================================================================
+    // Room Subscription, Join, Buzz, Leave & Room Closed Handling
+    // =======================================================================
+    function normalizeRoom(code, raw) {
+      const data = raw || {};
+      return {
+        code: String(code),
+        closed: Boolean(data.closed),
+        locked: Boolean(data.locked),
+        openedAt: data.openedAt || Date.now(),
+        winner: data.winner || null,
+        students: data.students && typeof data.students === "object" ? data.students : {},
+        history: Array.isArray(data.history)
+          ? data.history
+          : data.history && typeof data.history === "object"
+            ? Object.values(data.history)
+            : []
+      };
+    }
+
+    function detachRoomListener() {
+      if (state.firebase.roomRef && state.firebase.listener) {
+        off(state.firebase.roomRef, "value", state.firebase.listener);
+      }
+      state.firebase.roomRef = null;
+      state.firebase.listener = null;
+    }
+
+    function handleRoomClosed(closedRoomCode) {
+      const targetCode = closedRoomCode || state.roomCode;
+      detachRoomListener();
+      state.joined = false;
+      state.roomCode = null;
+      state.roomData = null;
+      state.roomClosedNotice = true;
+      state.lastReactionMs = null;
+
+      dom.roomClosedDetail.textContent = targetCode
+        ? `Your teacher closed room ${targetCode} and removed connected students. Enter a new 3-digit code below to rejoin.`
+        : "Your teacher closed the room and removed connected students. Enter a new 3-digit code below to rejoin.";
+
+      dom.roomCodeInput.value = "";
+      dom.buzzerPanel.classList.add("hidden");
+      dom.liveRoomClosedBanner.classList.add("hidden");
+      dom.joinPanel.classList.remove("hidden");
+      dom.roomClosedBanner.classList.remove("hidden");
+      playTone(330, 0.25, "sawtooth");
+      showToast("Room Closed by Host — you have been removed from the room.", "error");
+    }
+
+    function handleRoomSnapshot(rawRoom) {
+      if (!state.joined || !state.roomCode) return;
+
+      // If the host closed the room or removed the room node, notify and kick student back to join screen
+      if (!rawRoom || rawRoom.closed) {
+        handleRoomClosed(state.roomCode);
+        return;
+      }
+
+      // If student entry was wiped from students map while room is active, re-register silently
+      const room = normalizeRoom(state.roomCode, rawRoom);
+      const prevWinnerId = state.roomData?.winner?.buzzId || null;
+      const nextWinnerId = room.winner?.buzzId || null;
+
+      state.roomData = room;
+
+      if (!room.winner && !room.locked) {
+        state.lastReactionMs = null;
+      }
+
+      // Audio cue when someone else buzzes first and locks buzzers
+      if (nextWinnerId && nextWinnerId !== prevWinnerId && room.winner?.studentId !== state.studentId) {
+        playTone(340, 0.16, "sawtooth");
+      }
+
+      renderBuzzerView();
+    }
+
+    function subscribeToRoom(code) {
+      detachRoomListener();
+      if (state.firebase.active && state.firebase.db) {
+        const roomRef = ref(state.firebase.db, `rooms/${code}`);
+        const listener = (snap) => {
+          handleRoomSnapshot(snap.exists() ? snap.val() : null);
+        };
+        state.firebase.roomRef = roomRef;
+        state.firebase.listener = listener;
+        onValue(roomRef, listener);
+      }
+    }
+
+    async function joinRoom(name, code) {
+      clearJoinError();
+      state.roomClosedNotice = false;
+      dom.roomClosedBanner.classList.add("hidden");
+
+      const cleanName = name.trim();
+      const cleanCode = code.trim();
+
+      if (!cleanName) {
+        showJoinError("Please enter your name (or sign in with Google) before joining.");
+        dom.studentNameInput.focus();
+        return;
+      }
+
+      if (!/^[1-9][0-9]{2}$/.test(cleanCode)) {
+        showJoinError("Please enter a valid 3-digit room code between 100 and 999.");
+        dom.roomCodeInput.focus();
+        return;
+      }
+
+      dom.joinRoomBtn.disabled = true;
+      dom.joinRoomBtn.textContent = "Joining Room...";
+
+      try {
+        localStorage.setItem(STORAGE_KEYS.studentName, cleanName);
+        localStorage.setItem(STORAGE_KEYS.lastRoomCode, cleanCode);
+        state.studentName = cleanName;
+
+        const studentRecord = {
+          id: state.studentId,
+          name: cleanName,
+          joinedAt: Date.now()
+        };
+
+        if (state.firebase.active && state.firebase.db) {
+          const snap = await get(ref(state.firebase.db, `rooms/${cleanCode}`));
+          if (!snap.exists()) {
+            throw new Error(`No active room found for code ${cleanCode}. Check the code on your teacher's screen.`);
+          }
+          const roomVal = snap.val();
+          if (roomVal && roomVal.closed) {
+            throw new Error(`Room ${cleanCode} has already been closed by the host.`);
+          }
+          await set(ref(state.firebase.db, `rooms/${cleanCode}/students/${state.studentId}`), studentRecord);
+
+          state.roomCode = cleanCode;
+          state.roomData = normalizeRoom(cleanCode, {
+            ...roomVal,
+            students: { ...(roomVal.students || {}), [state.studentId]: studentRecord }
+          });
+          state.joined = true;
+          subscribeToRoom(cleanCode);
+        } else {
+          const rooms = readLocalRooms();
+          const roomVal = rooms[cleanCode];
+          if (!roomVal || roomVal.closed) {
+            throw new Error(`No active room found for code ${cleanCode}. Make sure the host has opened it.`);
+          }
+          roomVal.students = roomVal.students || {};
+          roomVal.students[state.studentId] = studentRecord;
+          writeLocalRooms(rooms);
+          broadcastLocalRoom(cleanCode, roomVal);
+
+          state.roomCode = cleanCode;
+          state.roomData = normalizeRoom(cleanCode, roomVal);
+          state.joined = true;
+        }
+
+        dom.joinPanel.classList.add("hidden");
+        dom.buzzerPanel.classList.remove("hidden");
+        renderBuzzerView();
+        playTone(587.33, 0.14, "sine");
+        showToast(`Joined room ${cleanCode}`, "success");
+      } catch (err) {
+        showJoinError(err.message || "Could not join room.");
+      } finally {
+        dom.joinRoomBtn.disabled = false;
+        dom.joinRoomBtn.textContent = "Join Buzzer Room";
+      }
+    }
+
+    async function sendBuzz() {
+      if (!state.joined || !state.roomCode || !state.roomData) return;
+      if (state.roomData.closed || state.roomData.locked || state.roomData.winner) return;
+
+      const now = Date.now();
+      const reactionMs = Math.max(0, now - (state.roomData.openedAt || now));
+      const buzzPayload = {
+        buzzId: "buzz_" + now + "_" + Math.random().toString(36).slice(2, 7),
+        studentId: state.studentId,
+        studentName: state.studentName,
+        buzzedAt: now,
+        reactionMs
+      };
+
+      // Optimistically disable button immediately to prevent double-taps
+      dom.buzzerBtn.disabled = true;
+
+      if (state.firebase.active && state.firebase.db) {
+        const roomRef = ref(state.firebase.db, `rooms/${state.roomCode}`);
+        let wonTransaction = false;
+
+        await runTransaction(roomRef, (currentRoom) => {
+          if (!currentRoom || currentRoom.closed) {
+            return currentRoom;
+          }
+          if (currentRoom.winner || currentRoom.locked) {
+            return currentRoom;
+          }
+          wonTransaction = true;
+          const prevHistory = Array.isArray(currentRoom.history)
+            ? currentRoom.history
+            : currentRoom.history && typeof currentRoom.history === "object"
+              ? Object.values(currentRoom.history)
+              : [];
+          const nextHistory = [buzzPayload, ...prevHistory].slice(0, 40);
+          return {
+            ...currentRoom,
+            winner: buzzPayload,
+            history: nextHistory
+          };
+        });
+
+        if (wonTransaction) {
+          state.lastReactionMs = reactionMs;
+          playTone(880, 0.25, "triangle");
+        } else {
+          playTone(300, 0.14, "sawtooth");
+        }
+        return;
+      }
+
+      // Local fallback transaction-like check
+      const rooms = readLocalRooms();
+      const currentRoom = rooms[state.roomCode];
+      if (!currentRoom || currentRoom.closed || currentRoom.winner || currentRoom.locked) {
+        renderBuzzerView();
+        return;
+      }
+
+      const prevHistory = Array.isArray(currentRoom.history) ? currentRoom.history : [];
+      const updatedRoom = {
+        ...currentRoom,
+        winner: buzzPayload,
+        history: [buzzPayload, ...prevHistory].slice(0, 40)
+      };
+      rooms[state.roomCode] = updatedRoom;
+      writeLocalRooms(rooms);
+      broadcastLocalRoom(state.roomCode, updatedRoom);
+      state.lastReactionMs = reactionMs;
+      playTone(880, 0.25, "triangle");
+      handleRoomSnapshot(updatedRoom);
+    }
+
+    async function leaveRoom() {
+      const code = state.roomCode;
+      const sid = state.studentId;
+      detachRoomListener();
+
+      if (code && sid) {
+        if (state.firebase.active && state.firebase.db) {
+          try {
+            await remove(ref(state.firebase.db, `rooms/${code}/students/${sid}`));
+          } catch (_e) {
+            // Ignore remove errors
+          }
+        } else {
+          const rooms = readLocalRooms();
+          if (rooms[code] && rooms[code].students && rooms[code].students[sid]) {
+            delete rooms[code].students[sid];
+            writeLocalRooms(rooms);
+            broadcastLocalRoom(code, rooms[code]);
+          }
+        }
+      }
+
+      state.joined = false;
+      state.roomCode = null;
+      state.roomData = null;
+      state.lastReactionMs = null;
+      dom.buzzerPanel.classList.add("hidden");
+      dom.joinPanel.classList.remove("hidden");
+      clearJoinError();
+    }
+
+    // =======================================================================
+    // Rendering
+    // =======================================================================
+    function renderBuzzerView() {
+      dom.soundToggleBtn.textContent = state.soundEnabled ? "Sound: ON" : "Sound: OFF";
+      dom.soundToggleBtn.setAttribute("aria-pressed", String(state.soundEnabled));
+
+      if (!state.joined || !state.roomData) return;
+
+      const room = state.roomData;
+      dom.activeStudentName.textContent = state.studentName;
+      dom.activeRoomCode.textContent = state.roomCode;
+
+      const winner = room.winner;
+      const iAmWinner = Boolean(winner && winner.studentId === state.studentId);
+      const someoneBuzzed = Boolean(winner && winner.studentName);
+      const isLocked = Boolean(room.locked);
+
+      dom.buzzerStatusBox.className = "buzzer-status-box";
+      dom.buzzerBtn.className = "buzzer-btn";
+
+      if (iAmWinner) {
+        dom.buzzerStatusBox.classList.add("is-winner");
+        dom.buzzerStatusTitle.textContent = "YOU BUZZED FIRST!";
+        dom.buzzerStatusDesc.textContent = "Wait for your teacher to answer and reset buzzers.";
+        dom.buzzerBtn.classList.add("is-won");
+        dom.buzzerBtn.disabled = true;
+        dom.buzzerMainLabel.textContent = "FIRST!";
+        dom.buzzerSubLabel.textContent = "LOCKED IN";
+      } else if (someoneBuzzed) {
+        dom.buzzerStatusBox.classList.add("is-frozen");
+        dom.buzzerStatusTitle.textContent = `BUZZER LOCKED — ${winner.studentName.toUpperCase()} BUZZED FIRST`;
+        dom.buzzerStatusDesc.textContent = "All other buzzers are frozen until your teacher resets.";
+        dom.buzzerBtn.classList.add("is-locked");
+        dom.buzzerBtn.disabled = true;
+        dom.buzzerMainLabel.textContent = "LOCKED";
+        dom.buzzerSubLabel.textContent = `${winner.studentName} won`;
+      } else if (isLocked) {
+        dom.buzzerStatusBox.classList.add("is-frozen");
+        dom.buzzerStatusTitle.textContent = "BUZZERS LOCKED BY HOST";
+        dom.buzzerStatusDesc.textContent = "Your teacher has temporarily locked buzzers.";
+        dom.buzzerBtn.classList.add("is-locked");
+        dom.buzzerBtn.disabled = true;
+        dom.buzzerMainLabel.textContent = "LOCKED";
+        dom.buzzerSubLabel.textContent = "HOST LOCK";
+      } else {
+        dom.buzzerStatusBox.classList.add("is-ready");
+        dom.buzzerStatusTitle.textContent = "BUZZERS OPEN — GET READY!";
+        dom.buzzerStatusDesc.textContent = "Tap the buzzer button as soon as you know the answer.";
+        dom.buzzerBtn.disabled = false;
+        dom.buzzerMainLabel.textContent = "BUZZ";
+        dom.buzzerSubLabel.textContent = "TAP OR SPACE";
+      }
+
+      if (typeof state.lastReactionMs === "number") {
+        dom.buzzReactionReadout.textContent = `Your buzz: +${state.lastReactionMs} ms`;
+      } else if (someoneBuzzed && typeof winner.reactionMs === "number") {
+        dom.buzzReactionReadout.textContent = `First buzz: +${winner.reactionMs} ms`;
+      } else {
+        dom.buzzReactionReadout.textContent = "";
+      }
+    }
+
+    // =======================================================================
+    // Event Listeners
+    // =======================================================================
+    dom.soundToggleBtn.addEventListener("click", () => {
+      state.soundEnabled = !state.soundEnabled;
+      localStorage.setItem(STORAGE_KEYS.soundEnabled, String(state.soundEnabled));
+      renderBuzzerView();
+      if (state.soundEnabled) {
+        playTone(660, 0.14, "sine");
+      }
+    });
+
+    dom.studentNameInput.addEventListener("input", () => {
+      state.studentName = dom.studentNameInput.value;
+      localStorage.setItem(STORAGE_KEYS.studentName, state.studentName);
+      clearJoinError();
+    });
+
+    dom.roomCodeInput.addEventListener("input", () => {
+      dom.roomCodeInput.value = dom.roomCodeInput.value.replace(/[^0-9]/g, "").slice(0, 3);
+      clearJoinError();
+    });
+
+    dom.googleSigninBtn.addEventListener("click", handleGoogleSignIn);
+    dom.googleSignoutBtn.addEventListener("click", handleGoogleSignOut);
+
+    dom.joinForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      await joinRoom(dom.studentNameInput.value, dom.roomCodeInput.value);
+    });
+
+    dom.buzzerBtn.addEventListener("click", sendBuzz);
+
+    dom.leaveRoomBtn.addEventListener("click", leaveRoom);
+
+    dom.dismissClosedBtn.addEventListener("click", () => {
+      state.roomClosedNotice = false;
+      dom.roomClosedBanner.classList.add("hidden");
+      dom.roomCodeInput.focus();
+    });
+
+    dom.rejoinAfterCloseBtn.addEventListener("click", () => {
+      state.roomClosedNotice = false;
+      dom.liveRoomClosedBanner.classList.add("hidden");
+      dom.buzzerPanel.classList.add("hidden");
+      dom.joinPanel.classList.remove("hidden");
+      dom.roomClosedBanner.classList.remove("hidden");
+      dom.roomCodeInput.focus();
+    });
+
+    // Spacebar buzz shortcut when unlocked in active room
+    window.addEventListener("keydown", (event) => {
+      if (!state.joined) return;
+      if (event.target && ["INPUT", "TEXTAREA"].includes(event.target.tagName)) return;
+      if (event.code === "Space" && !event.repeat && !dom.buzzerBtn.disabled) {
+        event.preventDefault();
+        sendBuzz();
+      }
+    });
+
+    // Cleanly remove student entry when closing/navigating away from tab
+    window.addEventListener("beforeunload", () => {
+      if (state.joined && state.roomCode && state.studentId) {
+        if (!state.firebase.active) {
+          const rooms = readLocalRooms();
+          if (rooms[state.roomCode]?.students?.[state.studentId]) {
+            delete rooms[state.roomCode].students[state.studentId];
+            writeLocalRooms(rooms);
+            broadcastLocalRoom(state.roomCode, rooms[state.roomCode]);
+          }
+        }
+      }
+    });
+
+    // =======================================================================
+    // Boot
+    // =======================================================================
+    (async function initStudent() {
+      initBroadcastChannel();
+      if (state.studentName) {
+        dom.studentNameInput.value = state.studentName;
+      }
+      const lastCode = localStorage.getItem(STORAGE_KEYS.lastRoomCode);
+      if (lastCode && /^[1-9][0-9]{2}$/.test(lastCode)) {
+        dom.roomCodeInput.value = lastCode;
+      }
+      renderBuzzerView();
+      await initFirebase();
+    })();
+  </script>
+</body>
+</html>
